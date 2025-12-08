@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Copy, Share } from 'lucide-react'
+import { Share } from 'lucide-react'
 import { encode } from '../utils/idEncoding'
 
 import { 
@@ -25,16 +25,8 @@ function shareId(data: unknown) {
   window.open(href, '_blank')
 }
 
-function copyOreIdObj(data: unknown) {
-  const str = JSON.stringify(data, null, 2)
-  const b58 = encode(str)
-  console.log(b58)
-  navigator.clipboard.writeText(b58)
-}
-
 function Id() {
   const [vault, setVault] = useState<OreVault | null>(null)
-  const [status, setStatus] = useState<string>('Ready')
   const [oreId, setOreId] = useState<OreId | null>(null)
 
   useEffect(() => {
@@ -44,19 +36,18 @@ function Id() {
         setVault(v)
       } catch (err) {
         console.error(err)
-        setStatus('Failed to initialise ORE vault')
       }
     })()
   }, [])
 
   async function handleCreateOreId() {
     if (!vault) {
-      setStatus('Vault not ready')
+      console.log('Vault not ready')
       return
     }
 
     try {
-      setStatus('Creating ORE ID…')
+      console.log('Creating ORE ID…')
 
       const pubJwk = await vault.getPublicEncryptionKeyJwk()
       const id = crypto.randomUUID()
@@ -68,49 +59,40 @@ function Id() {
       }
 
       setOreId(oreIdObj)
-      setStatus('ORE ID created')
+      console.log(oreIdObj)
+      console.log('ORE ID created')
     } catch (err) {
       console.error(err)
-      setStatus('Error creating ORE ID')
     }
   }
   return (
     <div className='p-8'>
-      <h1 className='text-3xl'>ORE | Player</h1>
+      <p className='text'>
+        Create an Ore Id (basically a keypair stored locally in the browser) so that artists can share their music with you.
+      </p>
       <div className='divider'></div>
-      <div className='flex items-center'>
-        <div className='flex-1'>
-          <button
-            className='btn'
-            onClick={handleCreateOreId}>
-            Create ORE ID
-          </button>
-        </div>
-        <div className='flex-2'>
-          {oreId && (
-          <div className='flex items-center'>
-            <div>
-              
-                <p className='font-mono text-xl'>{oreId.id}</p>
-            </div>
-            <div className='ml-4'>
-              <button
-                className='btn btn-ghost' onClick={() => copyOreIdObj(oreId)}><Copy />
-              </button>
-            </div>
-            <div>
-              <button
-                className='btn btn-ghost' onClick={() => shareId(oreId)}><Share />
-              </button>
-            </div>
-          </div>
-          )}
-        </div>
+      
+      <div>
+        <button
+          className='btn btn-secondary w-full md:w-1/2'
+          onClick={handleCreateOreId}>
+          Create ORE ID
+        </button>
       </div>
-      <div className='divider'></div>
-      <p>Status: {status}</p>
-      <div className='divider'></div>
+      <div>
+        {oreId && (
+          <div>
+             <p className='text-center my-6 font-mono text-sm md:text-lg md:text-left'>{oreId.id}</p>
+
+            <button
+              className='btn btn-outline w-full md:w-1/2' onClick={() => shareId(oreId)}>
+                <Share />Share
+            </button>
+          </div>
+        )}
+      </div>
     </div>
+
   )
 }
 

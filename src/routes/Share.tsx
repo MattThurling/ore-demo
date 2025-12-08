@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router'
 import { encode, decode } from '../utils/idEncoding'
 import { base64ToUint8 } from '@mattthurling/ore'
 import type { OreUnlockPayload } from '../types/unlock'
+import { Share as ShareIcon } from 'lucide-react'
 
 
 import {
@@ -38,11 +39,7 @@ function Share() {
       c: metaJson.cid,
       m: 'audio/mpeg',
       iv:  metaJson.manifest.encryption.ivBase64,
-      e: {
-        epk: envelope.ephemeralPublicKeyJwk,
-        iv: envelope.ivBase64,
-        sk: envelope.sealedContentKeyBase64,
-      },
+      e: envelope,
     }
 
     const json = JSON.stringify(payload, null, 2)
@@ -56,12 +53,16 @@ function Share() {
     window.open(href, '_blank')
   }
 
+  if (!id) return (<div className='p-8 text-warning'>No Ore Id provided. Open this page from a link with an ?id parameter.</div>)
+
   return (
     
     <div className='p-8'>
-      <h1 className='text-3xl'>ORE | Share</h1>
+      <p>
+        Grant access to your published track for a particular user. Don't reencrypt the file, send them an envelope containing the decryption key, sealed with their Ore Id public key.
+      </p>
       <div className='divider'></div>
-      <div className='flex'>
+      <div className='md:flex'>
         <div>
           <input
             className='file-input'
@@ -70,13 +71,13 @@ function Share() {
             onChange={e => setMetaFile(e.target.files?.[0] ?? null)}
           />
         </div>
-        <div>
+        <div className='mt-6 md:mt-0 md:pl-8'>
           <button
-            className='btn btn-secondary'
+            className='btn btn-secondary min-w-64'
             disabled={!metaFile}
             onClick={shareEnvelope}
           >
-            Share
+            <ShareIcon />Share
           </button>
         </div>
         

@@ -1,4 +1,5 @@
 import { Routes, Route } from 'react-router'
+import Nav from './components/Nav'
 import Publish from './routes/Publish'
 import Play from './routes/Play'
 import Share from './routes/Share'
@@ -8,6 +9,7 @@ import Both from './routes/Both'
 function App() {
   return (
     <div>
+      <Nav />
       <Routes>
         <Route path='id' element={<Id />} />
         <Route path='publish' element={<Publish />} />
