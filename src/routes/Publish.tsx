@@ -5,7 +5,6 @@ import {
   importAesGcmKeyFromBytes,
   encryptBytesAesGcm,
   createTrackManifest,
-  toArrayBuffer,
 } from '@mattthurling/ore'
 import { downloadBlob } from '../utils/os'
 
@@ -15,11 +14,14 @@ function Publish() {
   const [publishFile, setPublishFile] = useState<File | null>(null)
 
   async function encryptAndPublish() {
+    // Turn the uploaded file into bytes
     const bytes = new Uint8Array(await publishFile!.arrayBuffer())
+    // Generate a key for encryption
     const contentKey = await generateContentKey()
     const aesKey = await importAesGcmKeyFromBytes(contentKey)
+    // Encrypt the track
     const { ciphertext, iv } = await encryptBytesAesGcm(bytes, aesKey)
-
+    // Create track manifest
     const manifest = createTrackManifest({
       mimeType: publishFile!.type || 'audio/mpeg',
       sizeBytes: bytes.length,
@@ -28,24 +30,20 @@ function Publish() {
         title: publishFile!.name
       }
     })
-
-    const cid = await oreStorage!.write('Cock', ciphertext)
-
-    const publishMetadata = {
-      version: 'ore-publish-0.1' as const,
-      trackId: crypto.randomUUID(),
-      cid,
-      manifest,
-      contentKeyBase64: btoa(String.fromCharCode(...contentKey)),
-    }
-    const json = JSON.stringify(publishMetadata, null, 2)
-    const jsonBlob = new Blob([json], { type: 'application/json'})
-    const encBlob = new Blob([toArrayBuffer(ciphertext)], { type: 'application/octet-stream' })
+    console.log(manifest)
+    // Write to specified storage
+    const publishId = await oreStorage!.write(manifest, ciphertext)
     
-    // For now, download the encrypted file under the generated cid, but bypassing IPFS persistence / access issues
-    downloadBlob(encBlob, cid + '.enc')
-    downloadBlob(jsonBlob, cid + '.json') 
-    return publishMetadata
+    const publishRecord = {
+      cid: publishId,
+      url: `https://ipfs.io/ipfs/${publishId}`,
+      key: btoa(String.fromCharCode(...contentKey)),
+    }
+
+    const json = JSON.stringify(publishRecord, null, 2)
+    const jsonBlob = new Blob([json], { type: 'application/json'})
+
+    downloadBlob(jsonBlob, publishId + '.json') 
   }
 
 
