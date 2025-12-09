@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createHeliaContext, addEncryptedBytes } from '../utils/useHelia'
+import { createStorage } from '../oreStorage/oreStorageFactory'
 import {
   generateContentKey,
   importAesGcmKeyFromBytes,
@@ -9,12 +9,12 @@ import {
 } from '@mattthurling/ore'
 import { downloadBlob } from '../utils/os'
 
+const oreStorage = createStorage(import.meta.env.VITE_STORAGE_TYPE)
 
 function Publish() {
   const [publishFile, setPublishFile] = useState<File | null>(null)
 
   async function encryptAndPublish() {
-    const { fs } = await createHeliaContext()
     const bytes = new Uint8Array(await publishFile!.arrayBuffer())
     const contentKey = await generateContentKey()
     const aesKey = await importAesGcmKeyFromBytes(contentKey)
@@ -29,7 +29,7 @@ function Publish() {
       }
     })
 
-    const cid = await addEncryptedBytes(fs, ciphertext)
+    const cid = await oreStorage!.write('Cock', ciphertext)
 
     const publishMetadata = {
       version: 'ore-publish-0.1' as const,
