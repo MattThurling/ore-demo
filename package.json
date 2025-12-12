@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@helia/unixfs": "^6.0.3",
-    "@mattthurling/ore": "^0.0.5",
+    "@mattthurling/ore": "^0.0.6",
     "@tailwindcss/vite": "^4.1.17",
     "@types/pako": "^2.0.4",
     "bs58": "^6.0.0",
