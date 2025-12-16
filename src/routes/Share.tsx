@@ -1,10 +1,23 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router'
-import { encode, decode } from '../utils/idEncoding'
 import { base64ToUint8 } from '@mattthurling/ore'
-import type { OreUnlockPayload } from '../types/unlock'
+import type { OreUnlockPayload } from '../types/ore'
 import { Share as ShareIcon } from 'lucide-react'
+import { createStorage } from '../oreStorage/oreStorageFactory'
+import { type OreId } from '../types/ore'
 
+type track = {
+  manifest: {
+    encryption: {
+      ivBase64: string
+    },
+    meta: {
+      title: string
+    }
+  }
+}
+
+const oreStorage = createStorage(import.meta.env.VITE_STORAGE_TYPE)
 
 import {
   type OreEnvelope,
@@ -13,68 +26,96 @@ import {
 } from '@mattthurling/ore'
 
 
-function Share() {
 
-  const [metaFile, setMetaFile] = useState<File | null>(null)
-  
-  // ?id is the search parameter containing the OreID info
+function Share() {
+  const [recordFile, setRecordFile] = useState<File | null>(null)
+  const [oreId, setOreId] = useState<OreId | null>(null)
   const [searchParams] = useSearchParams()
-  const id = searchParams.get('id')
-  const json = id ? decode(id) : null
-  const oreId = JSON.parse(json)
-  console.log(oreId)
+  const cid = searchParams.get('id')
+  
+
+  useEffect(() => {
+    if (!cid) {
+      setOreId(null)
+      return
+    }
+
+    async function load() {
+      if (!oreStorage) return console.error('❌ storage is not defined')
+      if (!cid) return console.error('❌ cid is not defined')
+      const oreIdResult = await oreStorage.read<OreId>(cid)
+      if (!oreIdResult || oreIdResult?.kind !== 'json') return console.error('❌ oreId is not valid json')
+      setOreId(oreIdResult.value)
+    }
+    
+    load()
+
+  }, [cid])
+
 
   async function shareEnvelope() {
-    // Get the cid from the metafile
-    const meta = await metaFile!.text()
-    const metaJson = JSON.parse(meta)
+    // Get the id of the track from the metafile
+    const recordJson = await recordFile!.text()
+    const record = JSON.parse(recordJson)
+    // Get the full track information from storage
+    if (!oreStorage) return console.error('❌ storage is not defined')
+    const trackResult = await oreStorage.read<track>(record.cid)
+    if (!trackResult || trackResult?.kind != 'json') return console.error('❌ track info is not valid json')
+    const track = trackResult.value
     // Create the envelope of contentKey encrypted with user's public key
-    const pk = await importEncryptionPublicKeyFromJwk(oreId.publicEncryptionKey)
+    const pk = await importEncryptionPublicKeyFromJwk(oreId!.publicEncryptionKey)
     const envelope: OreEnvelope = await sealContentKey(
-      base64ToUint8(metaJson.contentKeyBase64),
+      base64ToUint8(record.key),
       pk)
-
+    
+    // Create an unlock payload. Used short field keys to keep encoded urls short but could make more explicit if that mode is abandoned
+    // And could probably simplify this to just the envelope as the user could read all from storage
     const payload: OreUnlockPayload = {
-      v: 'u0',
-      c: metaJson.cid,
+      v: '0.0.1',
+      c: record.cid,
       m: 'audio/mpeg',
-      iv:  metaJson.manifest.encryption.ivBase64,
+      iv: track.manifest.encryption.ivBase64,
       e: envelope,
     }
 
-    const json = JSON.stringify(payload, null, 2)
-    const b58 = encode(json)
+    // Write this to storage
+    const envelopeFormData = new FormData()
+    const envelopeJson = JSON.stringify(payload, null, 2)
+    const envelopeBlob = new Blob([envelopeJson], { type: 'application/json' })
+    envelopeFormData.append('file', envelopeBlob, track.manifest.meta.title + ' - ' + oreId?.idName)
+    const eId = await oreStorage!.write(envelopeFormData)
+    console.log(eId)
 
     const message =
-      `Hi! I have given you access to this track\n\n\n${window.location.origin}/play?track=${b58}`
+      `Hi! I have given you access to this track\n${window.location.origin}/play?envelope=${eId}`
     const href =
       "https://wa.me/?text=" +
       encodeURIComponent(message)
     window.open(href, '_blank')
   }
 
-  if (!id) return (<div className='p-8 text-warning'>No Ore Id provided. Open this page from a link with an ?id parameter.</div>)
+  if (!cid) return (<div className='p-8 text-warning'>No Ore Id provided. Open this page from a link with an ?id parameter.</div>)
 
   return (
     
     <div className='p-8'>
       <p>
-        Grant access to your published track for a particular user. Don't reencrypt the file, send them an envelope containing the decryption key, sealed with their Ore Id public key.
+        Grant access to your published track for <strong>{oreId?.idName}</strong>. Send them an envelope containing the decryption key, sealed with their Ore Id public key.
       </p>
       <div className='divider'></div>
-      <div className='md:flex'>
-        <div>
+      <div className='md:flex md:gap-6'>
+        <div className='md:flex-1'>
           <input
-            className='file-input'
+            className='file-input w-full'
             type='file'
             accept='application/json'
-            onChange={e => setMetaFile(e.target.files?.[0] ?? null)}
+            onChange={e => setRecordFile(e.target.files?.[0] ?? null)}
           />
         </div>
-        <div className='mt-6 md:mt-0 md:pl-8'>
+        <div className='mt-6 md:mt-0 md:flex-1'>
           <button
-            className='btn btn-secondary min-w-64'
-            disabled={!metaFile}
+            className='btn btn-secondary w-full'
+            disabled={!recordFile}
             onClick={shareEnvelope}
           >
             <ShareIcon />Share

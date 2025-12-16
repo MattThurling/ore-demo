@@ -1,5 +1,5 @@
 export default interface OreStorage {
   write(manifest: unknown, data: Uint8Array): Promise<string | void>
-  read(key: string): Promise<string | null>
+  read(key: string): Promise<any | null>
   delete(key: string): Promise<void>
 }

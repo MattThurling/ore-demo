@@ -1,24 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Share } from 'lucide-react'
-import { encode } from '../utils/idEncoding'
+import { createStorage } from '../oreStorage/oreStorageFactory'
+import { type OreId } from '../types/ore'
+
+const oreStorage = createStorage(import.meta.env.VITE_STORAGE_TYPE)
 
 import { 
   initVault,
   type OreVault
 } from '@mattthurling/ore'
 
-interface OreId {
-  version: 'ore-id-0.1'
-  id: string
-  publicEncryptionKey: JsonWebKey
-}
 
-
-function shareId(data: unknown) {
-  const json = JSON.stringify(data, null, 2)
-  const b58 = encode(json)
-  console.log(b58)
-  const message = `Hi! This is my Ore ID\n\n\n${window.location.origin}/share?id=${b58}`
+function shareId(id: string) {
+  const message = `Hi! This is my Ore ID\n${window.location.origin}/share?id=${id}`
   const href =
     "https://wa.me/?text=" +
     encodeURIComponent(message)
@@ -27,7 +21,10 @@ function shareId(data: unknown) {
 
 function Id() {
   const [vault, setVault] = useState<OreVault | null>(null)
-  const [oreId, setOreId] = useState<OreId | null>(null)
+  const [idId, setIdId] = useState<string>('')
+  const [idName, setIdName] = useState<string>('')
+  const [status, setStatus] = useState<'' | 'uploading' | 'published'>('')
+
 
   useEffect(() => {
     ;(async () => {
@@ -45,22 +42,26 @@ function Id() {
       console.log('Vault not ready')
       return
     }
-
+    setStatus('uploading')
     try {
       console.log('Creating ORE ID…')
-
+      // Create a keypair in browser local storage and get the public key
       const pubJwk = await vault.getPublicEncryptionKeyJwk()
-      const id = crypto.randomUUID()
-
+      // Prepare the oreId
       const oreIdObj: OreId = {
-        version: 'ore-id-0.1',
-        id,
+        version: '0.0.1',
+        idName,
         publicEncryptionKey: pubJwk,
       }
-
-      setOreId(oreIdObj)
-      console.log(oreIdObj)
-      console.log('ORE ID created')
+      // Convert to JSON
+      const oreIdJson = JSON.stringify(oreIdObj, null, 2)
+      // Wrap it in a FormData object
+      const oreIdFormData = new FormData()
+      const oreIdBlob = new Blob([oreIdJson], { type: 'application/json'})
+      oreIdFormData.append('file', oreIdBlob, idName)
+      // Write to specified storage
+      const oId = await oreStorage!.write(oreIdFormData)
+      if (oId) setIdId(oId); else return
     } catch (err) {
       console.error(err)
     }
@@ -68,30 +69,56 @@ function Id() {
   return (
     <div className='p-8'>
       <p className='text'>
-        Create an Ore Id (basically a keypair stored locally in the browser) so that artists can share their music with you.
+        Create an OreId so artists can share their music with you.
       </p>
       <div className='divider'></div>
-      
-      <div>
-        <button
-          className='btn btn-secondary w-full md:w-1/2'
-          onClick={handleCreateOreId}>
-          Create ORE ID
-        </button>
+      <div className='md:flex md:gap-6'>
+        <div className='md:flex-1'>
+          <input
+            className='input w-full'
+            type='text'
+            placeholder='Enter a name'
+            onChange={e => setIdName(e.target.value)}
+          />
+        </div>
+        <div className='mt-6 md:mt-0 md:flex-1' >
+          <button
+            className='btn btn-secondary w-full'
+            disabled={!idName || !!status}
+            onClick={handleCreateOreId}>
+            Create OreId
+          </button>
+        </div>
       </div>
-      <div>
-        {oreId && (
+      
+      {idId && (
+        <div>
+          <div className='divider'></div>
+          <p className='text'>
+            Your OreId has been published to the InterPlanetary File System!
+          </p>
+          <div className='mt-6'>
+            <a href={`https://ipfs.io/ipfs/${idId}`} className='hover-3d mx-2 cursor-pointer'>
+              <div className='card w-full bg-black text-white'>
+                <div className='card-body'>
+                  <div className='card-title'>
+                    {idName}
+                  </div>
+                  <p>{idId}</p>
+                </div>
+              </div>
+            </a>
+          </div>
           <div>
-             <p className='text-center my-6 font-mono text-sm md:text-lg md:text-left'>{oreId.id}</p>
-
             <button
-              className='btn btn-outline w-full md:w-1/2' onClick={() => shareId(oreId)}>
+              className='btn btn-outline w-full mt-6 md:w-1/2' onClick={() => shareId(idId)}>
                 <Share />Share
             </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
+
 
   )
 }

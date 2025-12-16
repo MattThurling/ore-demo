@@ -104,21 +104,19 @@ function Publish() {
       </div>
       {publishId && (
         <div>
-          <div className='divider'></div>
           <p className='text'>
             Your track has been published to the InterPlanetary File System!
           </p>
           <div className='mt-6'>
             <a href={`https://ipfs.io/ipfs/${publishId}`} className='hover-3d mx-2 cursor-pointer'>
-                <div className='card w-full bg-black text-white'>
-                  <div className='card-body'>
-                    <div className='card-title'>
-                      {trackName}
-                    </div>
-                    <p>{publishId}</p>
+              <div className='card w-full bg-black text-white'>
+                <div className='card-body'>
+                  <div className='card-title'>
+                    {trackName}
                   </div>
-                  
+                  <p>{publishId}</p>
                 </div>
+              </div>
             </a>
           </div>
         </div>

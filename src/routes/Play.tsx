@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { decode } from '../utils/idEncoding'
 import {
   initVault,
   decryptBytesAesGcm,
@@ -8,8 +7,19 @@ import {
   toArrayBuffer,
   type OreVault } from '@mattthurling/ore'
 import { useSearchParams } from 'react-router'
+import { createStorage } from '../oreStorage/oreStorageFactory'
+import { type OreUnlockPayload } from '../types/ore'
 
-const LOCAL_SERVER_URL = 'http://localhost:4000/files'
+const oreStorage = createStorage(import.meta.env.VITE_STORAGE_TYPE)
+
+type track = {
+  cid: string,
+  manifest: {
+    meta: {
+      title: string
+    }
+  }
+}
 
 function arrayBufferToAudioUrl(bytes: ArrayBuffer, mimeType: string) {
   const blob = new Blob([bytes], { type: mimeType })
@@ -19,12 +29,10 @@ function arrayBufferToAudioUrl(bytes: ArrayBuffer, mimeType: string) {
 function Play() {
   const [searchParams] = useSearchParams()
   const [vault, setVault] = useState<OreVault | null>(null)
+  const [track, setTrack] = useState<track | null>(null)
   const [audioUrl, setAudioUrl] = useState<string | null>()
   
-  const track = searchParams.get('track')
-
-  const json = track ? decode(track) : null
-  const trackObj = JSON.parse(json)
+  const eId = searchParams.get('envelope')
 
   useEffect(() => {
     ;(async () => {
@@ -38,13 +46,28 @@ function Play() {
   })
 
   async function downloadAndDecrypt() {
-    if (!vault) return
-    const res = await fetch(
-      `${LOCAL_SERVER_URL}/${trackObj.c}.enc`
-    )
-    const envelope = trackObj.e
-    const ivBytes = base64ToUint8(trackObj.iv)
-    const cipher = await res.bytes()
+    // Check vault
+    if (!vault) return console.error('❌ vault is not defined')
+    // Check storage
+    if (!oreStorage) return console.error('❌ storage is not defined')
+    // Read the envelope
+    if (!eId) return console.error('❌ eId is not defined')
+    const payloadResult = await oreStorage.read<OreUnlockPayload>(eId)
+    // Read the reference to the track
+    if (!payloadResult || payloadResult?.kind !== 'json') return console.error('❌ envelope is not valid json')
+    const payload = payloadResult.value
+    const trackResult = await oreStorage.read<track>(payload.c)
+    // Read the encrypted file
+    if (!trackResult || trackResult?.kind !== 'json') return console.error('❌ track is not valid json')
+    const track = trackResult.value
+    setTrack(track)
+    const cipherResult = await oreStorage.read(track.cid)
+    if (!cipherResult || cipherResult?.kind !== 'bytes') return console.error('❌ not valid bytes')
+    // Convert to the right format
+    const cipher = new Uint8Array(cipherResult.value)
+  
+    const envelope = payload.e
+    const ivBytes = base64ToUint8(payload.iv)
     const contentKeyBytes = await vault.openEnvelope(envelope)
     const contentKey = await importAesGcmKeyFromBytes(contentKeyBytes)
 
@@ -54,20 +77,20 @@ function Play() {
       ivBytes,
     )
 
-    const url = arrayBufferToAudioUrl(toArrayBuffer(plain), trackObj.m)
+    const url = arrayBufferToAudioUrl(toArrayBuffer(plain), payload.m)
 
     setAudioUrl(url)
  
   }
 
-  if (!track) return (<div className='p-8 text-warning'>No track provided. Open from a link with a ?track parameter.</div>)
+  if (!eId) return (<div className='p-8 text-warning'>No track provided. Open from a link with a ?track parameter.</div>)
   return (
     <div className='p-8'>
       <p className='text'>
         Play track decrypted with the key in the envelope sent to you.
       </p>
       <p className='mt-1'>
-        <strong>Encrypted file:</strong> {trackObj.c + '.enc'}
+        <strong>Track:</strong> {track?.manifest.meta.title}
       </p>
       <div className='divider'></div>
       <button
