@@ -44,7 +44,7 @@ function Play() {
         console.log(err)
       }
     })()
-  })
+  }, [])
 
   async function downloadAndDecrypt() {
     // Check vault
