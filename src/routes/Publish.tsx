@@ -103,7 +103,7 @@ function Publish() {
         </div>
       </div>
       {publishId && (
-        <div>
+        <div className='mt-6'>
           <p className='text'>
             Your track has been published to the InterPlanetary File System!
           </p>

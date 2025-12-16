@@ -31,6 +31,7 @@ function Play() {
   const [vault, setVault] = useState<OreVault | null>(null)
   const [track, setTrack] = useState<track | null>(null)
   const [audioUrl, setAudioUrl] = useState<string | null>()
+  const [status, setStatus] = useState<'' | 'working'>('') 
   
   const eId = searchParams.get('envelope')
 
@@ -52,6 +53,7 @@ function Play() {
     if (!oreStorage) return console.error('❌ storage is not defined')
     // Read the envelope
     if (!eId) return console.error('❌ eId is not defined')
+    setStatus('working')
     const payloadResult = await oreStorage.read<OreUnlockPayload>(eId)
     // Read the reference to the track
     if (!payloadResult || payloadResult?.kind !== 'json') return console.error('❌ envelope is not valid json')
@@ -95,6 +97,7 @@ function Play() {
       <div className='divider'></div>
       <button
         className='btn btn-secondary w-full md:w-1/2'
+        disabled={!!status}
         onClick={downloadAndDecrypt}>
           Decrypt
       </button>
