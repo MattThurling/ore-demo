@@ -31,7 +31,8 @@ function Play() {
   const [vault, setVault] = useState<OreVault | null>(null)
   const [track, setTrack] = useState<track | null>(null)
   const [audioUrl, setAudioUrl] = useState<string | null>()
-  const [status, setStatus] = useState<'' | 'working'>('') 
+  const [status, setStatus] = useState<'' | 'working'>('')
+  const [error, setError] = useState<string>('')
   
   const eId = searchParams.get('envelope')
 
@@ -48,29 +49,35 @@ function Play() {
 
   async function downloadAndDecrypt() {
     // Check vault
-    if (!vault) return console.error('❌ vault is not defined')
+    if (!vault) { setError('❌ vault is not defined'); return }
     // Check storage
-    if (!oreStorage) return console.error('❌ storage is not defined')
+    if (!oreStorage) { setError('❌ storage is not defined'); return }
     // Read the envelope
-    if (!eId) return console.error('❌ eId is not defined')
+    if (!eId) { setError('❌ eId is not defined'); return }
     setStatus('working')
     const payloadResult = await oreStorage.read<OreUnlockPayload>(eId)
     // Read the reference to the track
-    if (!payloadResult || payloadResult?.kind !== 'json') return console.error('❌ envelope is not valid json')
+    if (!payloadResult || payloadResult?.kind !== 'json') { setError('❌ envelope is not valid json'); return } 
     const payload = payloadResult.value
     const trackResult = await oreStorage.read<track>(payload.c)
     // Read the encrypted file
-    if (!trackResult || trackResult?.kind !== 'json') return console.error('❌ track is not valid json')
+    if (!trackResult || trackResult?.kind !== 'json') { setError('❌ track is not valid json'); return }
     const track = trackResult.value
     setTrack(track)
     const cipherResult = await oreStorage.read(track.cid)
-    if (!cipherResult || cipherResult?.kind !== 'bytes') return console.error('❌ not valid bytes')
+    if (!cipherResult || cipherResult?.kind !== 'bytes') { setError('❌ not valid bytes'); return }
     // Convert to the right format
     const cipher = new Uint8Array(cipherResult.value)
   
     const envelope = payload.e
     const ivBytes = base64ToUint8(payload.iv)
-    const contentKeyBytes = await vault.openEnvelope(envelope)
+    let contentKeyBytes
+    try {
+      contentKeyBytes = await vault.openEnvelope(envelope)
+    } catch {
+      setError("❌ can't open envelope")
+      return
+    }
     const contentKey = await importAesGcmKeyFromBytes(contentKeyBytes)
 
     const plain = await decryptBytesAesGcm(
@@ -78,6 +85,8 @@ function Play() {
       contentKey,
       ivBytes,
     )
+
+    // console.log(plain)
 
     const url = arrayBufferToAudioUrl(toArrayBuffer(plain), payload.m)
 
@@ -92,16 +101,18 @@ function Play() {
         Play track decrypted with the key in the envelope sent to you.
       </p>
       <p className='mt-1'>
-        <strong>Track:</strong> {track?.manifest.meta.title}
+        <strong>Track:</strong> {track?.manifest.meta.title} {error}
       </p>
       <div className='divider'></div>
       <button
+        hidden={!!audioUrl}
         className='btn btn-secondary w-full md:w-1/2'
         disabled={!!status}
         onClick={downloadAndDecrypt}>
           Decrypt
       </button>
       <audio
+        hidden={!audioUrl}
         className='w-full md:w-1/2 mt-6'
         id='player'
         controls
