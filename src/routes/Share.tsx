@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { base64ToUint8 } from '@mattthurling/ore'
 import type { OreUnlockPayload } from '../types/ore'
 import { Share as ShareIcon } from 'lucide-react'
 import { createStorage } from '../oreStorage/oreStorageFactory'
 import { type OreId } from '../types/ore'
+import { useUIStore } from '../state/uiStore'
 
 type track = {
   manifest: {
@@ -29,31 +30,16 @@ import {
 
 function Share() {
   const [recordFile, setRecordFile] = useState<File | null>(null)
-  const [oreId, setOreId] = useState<OreId | null>(null)
+  // const [oreId, setOreId] = useState<OreId | null>(null) // Read from IPFS, this is the object containing the name of the user, and the public encryption key
   const [searchParams] = useSearchParams()
-  const cid = searchParams.get('id')
+  // If an id is provided in the url, use that to set the value of oreHash, the ipfs id of the oreID we need to load
+  const [oreHash, setOreHash] = useState<string>(() => searchParams.get('id') ?? '') // This is the ipfs hash of the OreId, input either via search params or pasted by the user
   
-
-  useEffect(() => {
-    if (!cid) {
-      setOreId(null)
-      return
-    }
-
-    async function load() {
-      if (!oreStorage) return console.error('❌ storage is not defined')
-      if (!cid) return console.error('❌ cid is not defined')
-      const oreIdResult = await oreStorage.read<OreId>(cid)
-      if (!oreIdResult || oreIdResult?.kind !== 'json') return console.error('❌ oreId is not valid json')
-      setOreId(oreIdResult.value)
-    }
-    
-    load()
-
-  }, [cid])
-
+  const [status, setStatus] = useState<'' | 'working'>('')
+  const nerdMode = useUIStore(s => s.nerdMode)
 
   async function shareEnvelope() {
+    setStatus('working')
     // Get the id of the track from the metafile
     const recordJson = await recordFile!.text()
     const record = JSON.parse(recordJson)
@@ -62,8 +48,12 @@ function Share() {
     const trackResult = await oreStorage.read<track>(record.cid)
     if (!trackResult || trackResult?.kind != 'json') return console.error('❌ track info is not valid json')
     const track = trackResult.value
+    // Get the recipient oreId from strorage
+    const oreIdResult = await oreStorage.read<OreId>(oreHash)
+    if (!oreIdResult || oreIdResult?.kind !== 'json') return console.error('❌ oreId is not valid json')
+    const oreId = oreIdResult.value
     // Create the envelope of contentKey encrypted with user's public key
-    const pk = await importEncryptionPublicKeyFromJwk(oreId!.publicEncryptionKey)
+    const pk = await importEncryptionPublicKeyFromJwk(oreId.publicEncryptionKey)
     const envelope: OreEnvelope = await sealContentKey(
       base64ToUint8(record.key),
       pk)
@@ -82,7 +72,7 @@ function Share() {
     const envelopeFormData = new FormData()
     const envelopeJson = JSON.stringify(payload, null, 2)
     const envelopeBlob = new Blob([envelopeJson], { type: 'application/json' })
-    envelopeFormData.append('file', envelopeBlob, track.manifest.meta.title + ' - ' + oreId?.idName)
+    envelopeFormData.append('file', envelopeBlob, track.manifest.meta.title + ' - ' + oreId.idName)
     const eId = await oreStorage!.write(envelopeFormData)
     console.log(eId)
 
@@ -94,17 +84,24 @@ function Share() {
     window.open(href, '_blank')
   }
 
-  if (!cid) return (<div className='p-8 text-warning'>No Ore Id provided. Open this page from a link with an ?id parameter.</div>)
-
   return (
     
     <div className='p-8'>
       <p>
-        Grant access to your published track for <strong>{oreId?.idName}</strong>. Send them an envelope containing the decryption key, sealed with their Ore Id public key.
+        Grant access to your published track. Send an envelope containing the decryption key, sealed with the recipient's Ore Id public key.
       </p>
       <div className='divider'></div>
       <div className='md:flex md:gap-6'>
-        <div className='md:flex-1'>
+        <div className='mt-6 md:mt-0 md:flex-1'>
+           <input
+            className='input w-full'
+            type='text'
+            placeholder='ID you want to share with'
+            value={oreHash}
+            onChange={e => setOreHash(e.target.value)}
+          />
+        </div>
+        <div className='mt-6 md:mt-0 md:flex-1'>
           <input
             className='file-input w-full'
             type='file'
@@ -115,7 +112,7 @@ function Share() {
         <div className='mt-6 md:mt-0 md:flex-1'>
           <button
             className='btn btn-secondary w-full'
-            disabled={!recordFile}
+            disabled={!recordFile || !!status }
             onClick={shareEnvelope}
           >
             <ShareIcon />Share
@@ -123,6 +120,12 @@ function Share() {
         </div>
         
       </div>
+      {nerdMode && (
+        <div className='text-sm font-mono space-y-4 mt-6'>
+          <div className='divider'></div>
+          <p>Encrypts the creator's locally-stored content key, used to symmetrically encrypt the audio track, with the recipient's public key. This creates a tiny 'envelope' to share with a particular user, rather than asymetrically encrypting the whole track each time.</p>
+        </div>
+      )}
       
     </div>
   )

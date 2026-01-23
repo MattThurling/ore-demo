@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Share } from 'lucide-react'
 import { createStorage } from '../oreStorage/oreStorageFactory'
 import { type OreId } from '../types/ore'
+import { useUIStore } from '../state/uiStore'
 
 const oreStorage = createStorage(import.meta.env.VITE_STORAGE_TYPE)
 
@@ -24,6 +25,7 @@ function Id() {
   const [idId, setIdId] = useState<string>('')
   const [idName, setIdName] = useState<string>('')
   const [status, setStatus] = useState<'' | 'uploading' | 'published'>('')
+  const nerdMode = useUIStore(s => s.nerdMode)
 
 
   useEffect(() => {
@@ -117,8 +119,14 @@ function Id() {
           </div>
         </div>
       )}
+      {nerdMode && (
+        <div className='text-sm font-mono space-y-4 mt-6'>
+          <div className='divider'></div>
+          <p>Uses the browser's built-in <a className='link' href='https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API'>Web Crypto API</a> to generate a unique keypair. The private key is stored in the browser's local storage. A public key is then written to <a className='link' href='https://en.wikipedia.org/wiki/InterPlanetary_File_System'>IPFS</a> as JSON.</p>
+          <p>The ID can be shared, enabling other users /platforms to encrypt content for this device only.</p>
+        </div>
+      )}
     </div>
-
 
   )
 }

@@ -8,6 +8,7 @@ import {
   toArrayBuffer,
 } from '@mattthurling/ore'
 import { downloadBlob } from '../utils/os'
+import { useUIStore } from '../state/uiStore'
 
 const oreStorage = createStorage(import.meta.env.VITE_STORAGE_TYPE)
 
@@ -16,6 +17,7 @@ function Publish() {
   const [trackName, setTrackName] = useState<string>('')
   const [publishId, setPublishId] = useState<string>('')
   const [status, setStatus] = useState<'' | 'uploading' | 'published'>('')
+  const nerdMode = useUIStore(s => s.nerdMode)
 
   async function encryptAndPublish() {
     setStatus('uploading')
@@ -119,6 +121,14 @@ function Publish() {
               </div>
             </a>
           </div>
+        </div>
+      )}
+      {nerdMode && (
+        <div className='text-sm font-mono space-y-4 mt-6'>
+          <div className='divider'></div>
+          <p>Uses the browser's built-in <a className='link' href='https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API'>Web Crypto API</a> to generate a unique content key for the <a className='link' href='https://en.wikipedia.org/wiki/Symmetric-key_algorithm'>symmetric encryption</a> of an audio file using <a className='link' href='https://en.wikipedia.org/wiki/Advanced_Encryption_Standard'>AES</a>.</p>
+          <p>The encrypted file is then published to <a className='link' href='https://en.wikipedia.org/wiki/InterPlanetary_File_System'>IPFS</a>, while the encryption key and track metadata are downloaded locally as a json file.</p>
+          <p>The user need only do this once per track.</p>
         </div>
       )}
     </div>

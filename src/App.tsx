@@ -5,8 +5,13 @@ import Play from './routes/Play'
 import Share from './routes/Share'
 import Id from './routes/Id'
 import Both from './routes/Both'
+import { Glasses } from 'lucide-react'
+import { useUIStore } from './state/uiStore'
+
 
 function App() {
+  const nerdMode = useUIStore(s => s.nerdMode)
+  const setNerdMode = useUIStore(s => s.setNerdMode) 
   return (
     <div>
       <Nav />
@@ -17,6 +22,20 @@ function App() {
         <Route path='share' element={<Share />} />
         <Route path='both' element={<Both />} />
       </Routes>
+
+      <div className='fixed bottom-0 left-0 right-0 z-50 p-8'>
+        <div className='flex justify-end'>
+          <div className={ nerdMode ? 'text-secondary' : 'text-gray-300' }>
+            <Glasses />
+          </div>       
+          <input
+            type='checkbox'
+            checked={nerdMode}
+            onChange={(e) => setNerdMode(e.target.checked)}
+            className='toggle toggle-md ml-4' />
+        </div>
+      </div>
+      
     </div>
   )
 }
