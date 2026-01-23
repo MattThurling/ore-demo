@@ -2,9 +2,9 @@ import { NavLink } from "react-router"
 
 function Nav() {
   return (
-    <div className="navbar bg-base-100 shadow-sm">
-      <div className="flex-1">
-        <a className="btn btn-ghost text-xl">ORE</a>
+    <div className='navbar bg-base-100 shadow-sm'>
+      <div className='flex-1'>
+        <NavLink to='/' className='btn btn-ghost text-xl'>ORE</NavLink>
       </div>
       <div className="flex-none">
         <ul className="menu menu-horizontal px-1">
