@@ -1,8 +1,10 @@
 import { Routes, Route } from 'react-router'
 import Nav from './components/Nav'
+import Home from './routes/Home'
+import Share from './routes/Share'
 import Publish from './routes/Publish'
 import Play from './routes/Play'
-import Share from './routes/Share'
+
 import Id from './routes/Id'
 import Both from './routes/Both'
 import { Glasses } from 'lucide-react'
@@ -16,6 +18,7 @@ function App() {
     <div>
       <Nav />
       <Routes>
+        <Route path='' element={<Home />} />
         <Route path='id' element={<Id />} />
         <Route path='publish' element={<Publish />} />
         <Route path='play' element={<Play />} />

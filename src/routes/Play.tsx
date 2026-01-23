@@ -116,7 +116,7 @@ function Play() {
               type='text'
               value={envelopeHash}
               onChange={e => setEnvelopeHash(e.target.value)}
-              placeholder='Enter ID of track to unlock' />
+              placeholder='Enter envelope' />
           </div>
           <div className='mt-6 md:mt-0 md:flex-1'>
             <button
