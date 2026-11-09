@@ -6,7 +6,10 @@ type ReadResult<TJson> =
 | { kind: "bytes"; value: ArrayBuffer; contentType: string | null }
 
 export default class IpfsOreStorage implements oreStorage {
+  lastError?: string
+
   async write(formData: FormData): Promise<string | void> {
+    this.lastError = undefined
     try {
       const response = await fetch(`${import.meta.env.VITE_STORAGE_URL}/pin` , {
         method: 'POST',
@@ -22,7 +25,8 @@ export default class IpfsOreStorage implements oreStorage {
       const json = await response.json()
       return json.cid
     } catch (error) {
-      console.log('❌ Error during API call:', error)
+      this.lastError = error instanceof Error ? error.message : String(error)
+      console.error('❌ Error during API call:', error)
     }
   }
 

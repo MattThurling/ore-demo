@@ -35,6 +35,7 @@ function Publish() {
   const [split, setSplit] = useState<SplitParams>(DEFAULT_SPLIT)
   const [publishId, setPublishId] = useState<string>('')
   const [status, setStatus] = useState<'' | 'uploading' | 'published'>('')
+  const [error, setError] = useState('')
   const nerdMode = useUIStore(s => s.nerdMode)
 
   const handles = Array.from(new Set(rows.map((r) => r.handle).filter(Boolean)))
@@ -64,8 +65,29 @@ function Publish() {
     setRows((rs) => [...rs, { key: crypto.randomUUID(), name: '', handle: '', slot, category: 'guitar', role: 'performer', audibleSec: 60 }])
   }
 
+  function fail(message: string) {
+    setError(message)
+    setStatus('')
+  }
+
+  function publishAnother() {
+    setPublishId('')
+    setError('')
+    setStatus('')
+  }
+
   async function encryptAndPublish() {
+    setError('')
     setStatus('uploading')
+    if (!oreStorage) { fail('Storage is not configured (VITE_STORAGE_TYPE / VITE_STORAGE_URL).'); return }
+    try {
+      await doPublish()
+    } catch (err) {
+      fail(`Publishing failed: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
+  async function doPublish() {
     // Turn the uploaded file into bytes
     const bytes = new Uint8Array(await publishFile!.arrayBuffer())
     // Generate a key for encryption
@@ -79,7 +101,7 @@ function Publish() {
     encFormData.append('file', encBlob, publishFile!.name)
     // Write to specified storage and get an 'id'
     const encId = await oreStorage!.write(encFormData)
-    if (!encId) { setStatus(''); return }
+    if (!encId) { fail(`Uploading the encrypted audio failed. ${oreStorage!.lastError ?? ''}`.trim()); return }
     // Create track manifest
     const manifest = createTrackManifest({
       mimeType: publishFile!.type || 'audio/mpeg',
@@ -116,7 +138,8 @@ function Publish() {
     // And publish this as the reference to to the encrypted file
     const pId = await oreStorage!.write(publishFormData)
     // Now write a local publish record, including the content key used for encryption
-    if (pId) setPublishId(pId); else { setStatus(''); return }
+    if (!pId) { fail(`Publishing the track record failed. ${oreStorage!.lastError ?? ''}`.trim()); return }
+    setPublishId(pId)
     setStatus('published')
 
     const publishRecord = {
@@ -261,6 +284,13 @@ function Publish() {
         </button>
         {missing.length > 0 && !status && (
           <p className='text-xs mt-2 opacity-70'>To publish: {missing.join(', ')}.</p>
+        )}
+        {error && <p className='mt-2 text-sm text-error'>❌ {error}</p>}
+        {status === 'published' && (
+          <p className='text-xs mt-2 opacity-70'>
+            Published. The form is locked so the record matches what was pinned.{' '}
+            <button className='link' onClick={publishAnother}>Publish another track</button>
+          </p>
         )}
       </div>
 
