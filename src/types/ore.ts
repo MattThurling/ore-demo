@@ -28,7 +28,6 @@ export const SLOTS = ['A', 'B', 'C', 'D', 'E', 'F', 'G'] as const
 export interface Contributor {
   name: string
   handle: string
-  wallet: string
   /** Versions mixer slot the stem occupies. */
   slot: string
   category: string

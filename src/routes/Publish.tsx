@@ -61,7 +61,7 @@ function Publish() {
   function addRow() {
     const used = new Set(rows.map((r) => r.slot))
     const slot = SLOTS.find((s) => !used.has(s)) ?? 'G'
-    setRows((rs) => [...rs, { key: crypto.randomUUID(), name: '', handle: '', wallet: '', slot, category: 'guitar', role: 'performer', audibleSec: 60 }])
+    setRows((rs) => [...rs, { key: crypto.randomUUID(), name: '', handle: '', slot, category: 'guitar', role: 'performer', audibleSec: 60 }])
   }
 
   async function encryptAndPublish() {
@@ -95,7 +95,7 @@ function Publish() {
       version: '0.0.1',
       title: trackName,
       registrant,
-      contributors: rows.map((r) => ({ name: r.name, handle: r.handle, wallet: r.wallet, slot: r.slot, category: r.category, role: r.role, audibleSec: r.audibleSec, derivedFrom: r.derivedFrom || undefined })),
+      contributors: rows.map((r) => ({ name: r.name, handle: r.handle, slot: r.slot, category: r.category, role: r.role, audibleSec: r.audibleSec, derivedFrom: r.derivedFrom || undefined })),
       split: {
         ...split,
         // Only keep weights for categories actually used in this work
@@ -177,7 +177,7 @@ function Publish() {
           <table className='table table-sm'>
             <thead>
               <tr>
-                <th>Name</th><th>Handle</th><th>Wallet</th><th>Slot</th><th>Stem</th><th>Role</th><th>Audible (s)</th><th>Built on</th><th></th>
+                <th>Name</th><th>Handle</th><th>Slot</th><th>Stem</th><th>Role</th><th>Audible (s)</th><th>Built on</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -185,7 +185,6 @@ function Publish() {
                 <tr key={r.key}>
                   <td><input className='input input-sm w-24' value={r.name} onChange={e => update(r.key, { name: e.target.value })} /></td>
                   <td><input className='input input-sm w-24' value={r.handle} onChange={e => update(r.key, { handle: e.target.value.toLowerCase() })} /></td>
-                  <td><input className='input input-sm w-40 font-mono text-xs' value={r.wallet} onChange={e => update(r.key, { wallet: e.target.value })} placeholder='0x…' /></td>
                   <td>
                     <select className='select select-sm w-16' value={r.slot} onChange={e => update(r.key, { slot: e.target.value })}>
                       {SLOTS.map((s) => <option key={s}>{s}</option>)}

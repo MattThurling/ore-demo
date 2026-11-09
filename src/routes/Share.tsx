@@ -133,13 +133,13 @@ function Share() {
         </div>
       </div>
 
-      <div className='mt-6 md:flex md:gap-6 md:items-center'>
-        <label className='label cursor-pointer gap-3'>
+      <div className='mt-6 flex flex-col gap-3'>
+        <label className='label cursor-pointer gap-3 self-start'>
           <input type='checkbox' className='toggle toggle-secondary' checked={isPlatform} onChange={e => setIsPlatform(e.target.checked)} />
           <span className='label-text'>Recipient is a platform (attach licence terms)</span>
         </label>
         {isPlatform && (
-          <label className='mt-4 md:mt-0 flex items-center gap-3'>
+          <label className='flex flex-wrap items-center gap-3 pl-1'>
             <span className='label-text'>Rate: EUR per listened second</span>
             <input className='input input-sm w-28' type='number' step='0.0005' min={0} value={rate} onChange={e => setRate(Number(e.target.value))} />
             <span className='label-text opacity-70'>· batch settlement</span>
