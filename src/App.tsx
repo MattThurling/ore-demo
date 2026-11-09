@@ -15,7 +15,7 @@ function App() {
   const nerdMode = useUIStore(s => s.nerdMode)
   const setNerdMode = useUIStore(s => s.setNerdMode) 
   return (
-    <div>
+    <div className='pb-24'>
       <Nav />
       <Routes>
         <Route path='/' element={<Home />} />
@@ -26,8 +26,10 @@ function App() {
         <Route path='both' element={<Both />} />
       </Routes>
 
-      <div className='fixed bottom-0 left-0 right-0 z-50 p-8'>
-        <div className='flex justify-end'>
+      {/* Nerd-mode toggle. Fixed to the corner only: a full-width bar here would sit over
+          page content and swallow clicks on anything near the bottom of the viewport. */}
+      <div className='fixed bottom-8 right-8 z-50'>
+        <div className='flex items-center'>
           <div className={ nerdMode ? 'text-secondary' : 'text-gray-300' }>
             <Glasses />
           </div>       
