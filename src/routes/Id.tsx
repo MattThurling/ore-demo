@@ -3,6 +3,7 @@ import { Share } from 'lucide-react'
 import { createStorage } from '../oreStorage/oreStorageFactory'
 import { type OreId } from '../types/ore'
 import { useUIStore } from '../state/uiStore'
+import { gatewayUrl } from '../oreStorage/gateways'
 
 const oreStorage = createStorage(import.meta.env.VITE_STORAGE_TYPE)
 
@@ -100,7 +101,7 @@ function Id() {
             Your OreId has been published to the InterPlanetary File System!
           </p>
           <div className='mt-6'>
-            <a href={`https://ipfs.io/ipfs/${idId}`} className='hover-3d mx-2 cursor-pointer'>
+            <a href={gatewayUrl(idId)} className='hover-3d mx-2 cursor-pointer'>
               <div className='card w-full bg-black text-white'>
                 <div className='card-body'>
                   <div className='card-title'>

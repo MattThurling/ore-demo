@@ -13,6 +13,8 @@ export default function Home() {
       <h2 className='font-bold'>Getting started as a listener</h2>
       <p>Create a unique <Link to='/id' className='link'>ORE Id</Link> and share it with your favourite creators.</p>
       <p><Link to='/play' className='link'>Unlock and play their music</Link> on your device.</p>
+      <h2 className='font-bold'>Platforms</h2>
+      <p>A platform such as Versions has an ORE Id too. <Link to='/share' className='link'>Issue it an envelope</Link> with licence terms and it can play the track and pay every contributor by the split rule declared in the track's rights record.</p>
       <h2 className='font-bold'>Nerd mode</h2>
       <p>Toggle nerd mode (bottom right) if you're interested what's going on behind the scenes.</p>
       {nerdMode && (

@@ -1,4 +1,5 @@
 import type oreStorage from './oreStorageInterface'
+import { IPFS_GATEWAYS } from './gateways'
 
 type ReadResult<TJson> =
 | { kind: "json"; value: TJson }
@@ -26,31 +27,35 @@ export default class IpfsOreStorage implements oreStorage {
   }
 
   async read<TJson = unknown>(key: string): Promise<ReadResult<TJson> | null> {
-    try {
-      const response = await fetch(`https://ipfs.io/ipfs/${key}`, { method: "GET" });
+    let lastError: unknown
+    for (const gateway of IPFS_GATEWAYS) {
+      try {
+        const response = await fetch(`${gateway}${key}`, { method: "GET" });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Reading failed: ${response.status} - ${errorText}`);
+        if (!response.ok) {
+          lastError = new Error(`Reading failed: ${response.status} from ${gateway}`);
+          continue
+        }
+
+        const contentType = response.headers.get("content-type");
+
+        // If server tells you it's JSON, parse JSON
+        if (contentType?.includes("application/json")) {
+          return { kind: "json", value: await response.json() };
+        }
+
+        // Otherwise treat as bytes (audio/encrypted/etc.)
+        return {
+          kind: "bytes",
+          value: await response.arrayBuffer(),
+          contentType,
+        };
+      } catch (error) {
+        lastError = error
       }
-
-      const contentType = response.headers.get("content-type");
-
-      // If server tells you it's JSON, parse JSON
-      if (contentType?.includes("application/json")) {
-        return { kind: "json", value: await response.json() };
-      }
-
-      // Otherwise treat as bytes (audio/encrypted/etc.)
-      return {
-        kind: "bytes",
-        value: await response.arrayBuffer(),
-        contentType,
-      };
-    } catch (error) {
-      console.log("❌ Error during read:", error);
-      return null;
     }
+    console.log("❌ Error during read:", lastError);
+    return null;
   }
 
 
