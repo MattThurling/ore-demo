@@ -39,7 +39,13 @@ function Publish() {
 
   const handles = Array.from(new Set(rows.map((r) => r.handle).filter(Boolean)))
   const categories = Array.from(new Set(rows.map((r) => r.category)))
-  const rightsValid = rows.length > 0 && rows.every((r) => r.name && r.handle && r.slot && r.category) && handles.includes(registrant)
+  const missing = [
+    !publishFile && 'choose an audio file',
+    !trackName && 'enter a track name',
+    rows.length === 0 && 'add at least one contributor (or Fill example)',
+    rows.length > 0 && !rows.every((r) => r.name && r.handle && r.slot && r.category) && 'give every contributor a name and handle',
+    rows.length > 0 && !handles.includes(registrant) && 'pick the registrant',
+  ].filter((m): m is string => Boolean(m))
 
   function fillExample() {
     setTrackName(EXAMPLE_TITLE)
@@ -248,13 +254,15 @@ function Publish() {
 
       <div className='mt-6'>
         <button
-          className='btn btn-secondary w-full md:w-1/3'
-          disabled={!publishFile || !trackName || !rightsValid || !!status}
+          className={`btn w-full md:w-1/3 ${missing.length || status ? 'btn-disabled opacity-50' : 'btn-secondary'}`}
+          disabled={missing.length > 0 || !!status}
           onClick={encryptAndPublish}
           >
             {status === 'uploading' ? 'Encrypting and publishing…' : 'Encrypt and publish'}
         </button>
-        {!rightsValid && rows.length > 0 && <p className='text-xs mt-2 opacity-70'>Every contributor needs a name and handle, and the registrant must be one of them.</p>}
+        {missing.length > 0 && !status && (
+          <p className='text-xs mt-2 opacity-70'>To publish: {missing.join(', ')}.</p>
+        )}
       </div>
 
       {publishId && (
